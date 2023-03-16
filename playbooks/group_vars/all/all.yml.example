@@ -2,7 +2,6 @@
 
 rhcos_ver:
 ocp_ver:
-arch: 'x86_64'
 
 openshift_install: 'openshift-install'
 
