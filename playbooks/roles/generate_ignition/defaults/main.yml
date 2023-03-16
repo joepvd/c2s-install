@@ -8,21 +8,15 @@ openshift_install: '/usr/local/bin/openshift-install-4.7.0'
 openshift_client: '/usr/local/bin/oc-4.7.0'
 kubectl: '/usr/local/bin/kubectl-4.7.0'
 kubeconfig: "{{ ansible_env.HOME }}/.kube/config"
-filetranspile: '/usr/local/bin/filetranspiler'
-fakeroots: 'fakeroots'
 
 pull_secret: '{{ mirror_base }}/pull-secret.txt'
 
 master_schedulable: false
 cluster_channel: 'stable'
 
-# Set to true if using a private registry that has custom SSL certificates
-private_registry: true
-
 fips: false
 ssh_public_key_file: '/{{ ansible_env.HOME }}.ssh/id_ed25519.pub'
 
-master_count: 3
 worker_count: 3
 
 fips_enabled: false
@@ -39,26 +33,8 @@ service_network_cidr: '172.30.0.0/16'
 
 network_policy: 'NetworkPolicy'
 
-httpd_document_root: '/var/www/html'
-
-filetranspiler: '/usr/local/bin/filetranspiler'
-
-fake_root_base: '/tmp/fakeroots'
-
 pip_cmd: 'pip3'
 pip_args: ''
-
-filetranspiler_pip_requirements:
-  - 'file-magic'
-filetranspiler_rpm_requirements:
-  - 'python3-magic'
-
-# Fully air-gap install??
-air_gapped: true
-
-# Supported platforms include
-# vmware, aws, gcp, bare_metal, none
-platform: 'aws'
 
 infrastructure_id: 'abc123'
 
@@ -74,11 +50,6 @@ ocp_ver: '4.7.18'
 arch: 'x86_64'
 
 ign_version:
-  '4.2': '2.1.0'
-  '4.3': '2.1.0'
-  '4.4': '2.1.0'
-  '4.5': '2.2.0'
-  '4.6': '3.1.0'
   '4.7': '3.1.0'
 
 kube_ssl_enabled: false
@@ -128,9 +99,7 @@ disk: 'xvda'
 #elb_endpoint: 'https://elasticloadbalancing.us-iso-east-1.c2s.ic.gov'
 #aws_ssl_enabled: false
 
-#combine: true
-
-#ec2_key_name: 'Combine'
+#ec2_key_name: ''
 
 #vpc_id: 'vpc-'
 #subnet_id: 'subnet-'

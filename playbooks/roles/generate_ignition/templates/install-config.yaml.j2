@@ -1,27 +1,23 @@
 ---
 apiVersion: v1
 baseDomain: "{{ ocp_base_domain }}"
-{% if platform == 'aws' and credentials_mode is defined %}
+{% if credentials_mode is defined %}
 credentialsMode: "{{ credentials_mode }}"
 {% endif %}
 compute:
 - hyperthreading: Enabled
   name: worker
   replicas: {{ worker_count }}
-{% if platform == 'aws' %}
   platform:
     aws:
       type: "{{ ec2_instance_type.worker }}"
-{% endif %}
 controlPlane:
   hyperthreading: Enabled
   name: master
-  replicas: {{ master_count }}
-{% if platform == 'aws' %}
+  replicas: 3
   platform:
     aws:
       type: "{{ ec2_instance_type.master }}"
-{% endif %}
 metadata:
   name: "{{ ocp_cluster_name }}"
 networking:
@@ -34,7 +30,6 @@ networking:
   serviceNetwork:
   - "{{ service_network_cidr }}"
 platform:
-{% if platform == 'aws' %}
   aws:
     region: '{{ ansible_env.AWS_DEFAULT_REGION }}'
 {% if 'us-iso' in ansible_env.AWS_DEFAULT_REGION %}
@@ -67,18 +62,13 @@ platform:
     - {{ ec2_public_subnets[1] }}
     - {{ ec2_public_subnets[2] }}
 {% endif %}
-{% else %}
-  none: {}
-{% endif %}
 pullSecret: '{{ slurped_pull_secret_b64.content | b64decode | trim }}'
 sshKey: '{{ slurped_key_b64.content | b64decode | trim }}'
 fips: {{ fips_enabled | bool | lower }}
 publish: "{{ ocp_cluster_publish }}"
 additionalTrustBundle: |
 {{ slurped_aws_api_ca_bundle_64.content | b64decode | trim }}
-{% if private_registry %}
 {{ slurped_registry_ca_bundle_b64.content | b64decode | trim }}
-{% endif %}
 imageContentSources:
 - mirrors:
   - {{ mirror_registry }}:{{ mirror_registry_port }}/ocp4/openshift4

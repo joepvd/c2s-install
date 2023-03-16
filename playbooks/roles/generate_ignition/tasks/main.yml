@@ -22,7 +22,7 @@
     mode: 0700
 
 # TODO: get public key from the return of this task.
-#       not sure if it works even when the key already exists
+#       not sure if it return the public key when key already exists
 - name: Generate SSH keypair for cluster nodes
   community.crypto.openssh_keypair:
    path: "{{ ssh_key_file }}"
@@ -31,25 +31,11 @@
    force: false
    state: present
 
+# TODO: See task TODO above
 - name: Fetch public key
   slurp:
     src: '{{ ssh_key_file }}.pub'
   register: slurped_key_b64
-
-# TODO: This tasks doesn't work very well
-#- name: Configure SSH client for cluster node access
-#  lineinfile:
-#    path: "{{ ansible_env.HOME }}/.ssh/config"
-#    line: "{{ item.line }}"
-#    state: present
-#    backup: yes
-#    create: yes
-#    mode: 0600
-#  with_items:
-#    - { line: "Host *" }
-#    - { line: "    HostName %h.{{ ocp_cluster_name }}.{{ ocp_base_domain }}" }
-#    - { line: "    User core" }
-#    - { line: "    IdentityFile {{ ansible_env.HOME }}/.ssh/{{ ocp_cluster_name }}_rsa" }
 
 - name: Fetch pull secret
   slurp:
@@ -60,23 +46,12 @@
   slurp:
     src: "{{ certificate_bundle }}"
   register: slurped_registry_ca_bundle_b64
-  when: ( private_registry | bool )
 
+# TODO: This should be a var somewhere
 - name: Slurp private AWS region API CA
   slurp:
     src: 'roles/generate_ignition/files/aws_api_ca_bundle.pem'
   register: slurped_aws_api_ca_bundle_64
-  when:
-    - (platform is match("aws"))
-    - ( not combine | bool )
-
-- name: Slurp private AWS region API CA (Combine)
-  slurp:
-    src: 'roles/generate_ignition/files/combine_ca_bundle.pem'
-  register: slurped_aws_api_ca_bundle_64
-  when:
-    - (platform is match("aws"))
-    - ( combine | bool )
 
 - name: Pull in vpc cloudformation facts
   import_role:
@@ -171,7 +146,6 @@
     path: "{{ ignition_configs }}/manifests/cloud-provider-config.yaml"
     state: absent
   when:
-    - (platform is match("aws"))
     - ("us-iso" in ansible_env.AWS_DEFAULT_REGION)
 
 - name: Copy new cloud provider config
@@ -180,26 +154,20 @@
     dest: "{{ ignition_configs }}/manifests/cloud-provider-config.yaml"
     mode: 0644
   when:
-    - (platform is match("aws"))
     - ("us-iso" in ansible_env.AWS_DEFAULT_REGION)
 
 - name: Set access key fact
   set_fact:
     aws_access_key_id: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
-  when:
-    - (platform is match("aws"))
 
 - name: Set secret access key fact
   set_fact:
     aws_secret_access_key_id: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
-  when:
-    - (platform is match("aws"))
 
 - name: Set session token fact
   set_fact:
     aws_session_token: "{{ lookup('env', 'AWS_SESSION_TOKEN') }}"
   when:
-    - (platform is match("aws"))
     - (ansible_env.AWS_SESSION_TOKEN is defined)
 
 - name: Remove existing cloud credentials config
@@ -207,7 +175,6 @@
     path: "{{ ignition_configs }}/openshift/{{ item }}"
     state: absent
   when:
-    - (platform is match("aws"))
     - ("us-iso" in ansible_env.AWS_DEFAULT_REGION)
   with_items:
     - '99_cloud-creds-secret.yaml'
@@ -223,7 +190,6 @@
     dest: "{{ ignition_configs }}/openshift/{{ item }}"
     mode: 0644
   when:
-    - (platform is match("aws"))
     - ("us-iso" in ansible_env.AWS_DEFAULT_REGION)
   with_items:
     - '99_cloud-creds-secret.yaml'
@@ -238,7 +204,7 @@
     path: "{{ ignition_configs }}/manifests/cluster-dns-02-config.yml"
     state: absent
   when:
-    - (platform is match("aws") and (not route53_enabled | bool))
+    - (not route53_enabled | bool)
 
 - name: Add custom DNS operator config
   template:
@@ -246,25 +212,7 @@
     dest: "{{ ignition_configs }}/manifests/cluster-dns-02-config.yml"
     mode: 0644
   when:
-    - (platform is match("aws") and (not route53_enabled | bool))
-
-#- name: Add Combine Metadata interceptor for master nodes
-#  template:
-#    src: c2s-instance-metadata-machineconfig.yaml.j2
-#    dest: "{{ ignition_configs }}/manifests/c2s-instance-metadata-master-machineconfig.yaml"
-#    mode: 0644
-#  vars:
-#    node_role: 'master'
-#  when: ( combine | bool )
-
-#- name: Add Combine Metadata interceptor for worker nodes
-#  template:
-#    src: c2s-instance-metadata-machineconfig.yaml.j2
-#    dest: "{{ ignition_configs }}/manifests/c2s-instance-metadata-worker-machineconfig.yaml"
-#    mode: 0644
-#  vars:
-#    node_role: 'worker'
-#  when: ( combine | bool )
+    - (not route53_enabled | bool)
 
 - name: Slurp json state
   shell: grep -A 2 'ClusterID' {{ ignition_configs }}/.openshift_install_state.json | grep InfraID | awk '{print $2}' | tr -d '"'
@@ -297,7 +245,6 @@
     - '{{ ignition_configs }}/manifests/*.y*ml'
     - '{{ ignition_configs }}/openshift/*.y*ml'
   when:
-    - (platform is match("aws"))
     - ec2_instance_profile.worker is defined
 
 - name: Change master iam profile name
@@ -309,7 +256,6 @@
     - '{{ ignition_configs }}/manifests/*.y*ml'
     - '{{ ignition_configs }}/openshift/*.y*ml'
   when: 
-    - (platform is match("aws"))
     - ec2_instance_profile.master is defined
 
 - name: Change master security group from the default pattern
@@ -321,7 +267,6 @@
     - '{{ ignition_configs }}/manifests/*.y*ml'
     - '{{ ignition_configs }}/openshift/*.y*ml'
   when:
-    - (platform is match("aws"))
     - (ec2_sg.master.name is defined)
 
 - name: Change the worker security group from the default pattern
@@ -333,7 +278,6 @@
     - '{{ ignition_configs }}/manifests/*.y*ml'
     - '{{ ignition_configs }}/openshift/*.y*ml'
   when:
-    - (platform is match("aws"))
     - (ec2_sg.worker.name is defined)
 
 #- name: Change master machine set internal LB name
@@ -363,7 +307,6 @@
     - '{{ ignition_configs }}/manifests/*.y*ml'
     - '{{ ignition_configs }}/openshift/*.y*ml'
   when:
-    - (platform is match("aws"))
     - (private_subnets[0].name is defined)
 
 - name: Change private subnet 1 name
@@ -375,7 +318,6 @@
     - '{{ ignition_configs }}/manifests/*.y*ml'
     - '{{ ignition_configs }}/openshift/*.y*ml'
   when:
-    - (platform is match("aws"))
     - (private_subnets[1].name is defined)
 
 - name: Change private subnet 2 name
@@ -387,8 +329,11 @@
     - '{{ ignition_configs }}/manifests/*.y*ml'
     - '{{ ignition_configs }}/openshift/*.y*ml'
   when:
-    - (platform is match("aws"))
     - (private_subnets[2].name is defined)
+
+
+# TODO: These block of tasks change the ingress load balancer. Need to check what is used by default
+#       in 4.11 and 4.12 to see if we should change to Network Load Balancer or use default
 
 #- name: Remove default Ingress Controller config
 #  file:
@@ -418,7 +363,7 @@
     path: "{{ ignition_configs }}/manifests/cluster-network-03-config.yml"
     state: absent
   when:
-    - (platform is match("aws") and "us-iso" in ansible_env.AWS_DEFAULT_REGION)
+    - ("us-iso" in ansible_env.AWS_DEFAULT_REGION)
 
 - name: Customize custom cluster network policy
   template:
@@ -426,7 +371,7 @@
     dest: "{{ ignition_configs }}/manifests/cluster-network-03-config.yml"
     mode: 0644
   when:
-    - (platform is match("aws") and "us-iso" in ansible_env.AWS_DEFAULT_REGION)
+    - ("us-iso" in ansible_env.AWS_DEFAULT_REGION)
 
 #- name: Stop before generating ignition configs
 #  fail:
@@ -446,6 +391,7 @@
     path: "{{ kubeconfig }}"
     state: absent
 
+# Generally this copies the kubeconfig file to ~/.kube/config
 - name: Set kube config
   copy:
     src: "{{ ignition_configs }}/auth/kubeconfig"
