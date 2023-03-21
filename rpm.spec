@@ -51,7 +51,7 @@ cp -r cloudformation %{buildroot}%{_datadir}/%{name}/cloudformation/
 %{_datadir}/%{name}/cloudformation
 
 %changelog
-* Tue Dec 13 2022 Initial RPM Build
-- Initial example of spec.
 * Wed Mar 08 2023 Add ansible collections requirements file
 - Add ansible collections requirements file
+* Tue Dec 13 2022 Initial RPM Build
+- Initial example of spec.
